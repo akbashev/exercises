@@ -21,14 +21,19 @@ module Lecture2
     ( -- * Normal
       lazyProduct
     , duplicate
+    , duplicate2
     , removeAt
     , evenLists
     , dropSpaces
-
     , Knight (..)
+    , Chest (..)
+    , Reward (..)
+    , Dragon (..)
+    , Cave (..)
+    , FightResult (..)
     , dragonFight
 
-      -- * Hard
+    --   -- * Hard
     , isIncreasing
     , merge
     , mergeSort
@@ -39,6 +44,7 @@ module Lecture2
     , eval
     , constantFolding
     ) where
+import Data.Char(isSpace)
 
 -- VVV If you need to import libraries, do it after this line ... VVV
 
@@ -51,8 +57,13 @@ zero, you can stop calculating product and return 0 immediately.
 >>> lazyProduct [4, 3, 7]
 84
 -}
+
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct [] = 0
+lazyProduct [x] = x
+lazyProduct (x:xs) = case x of 
+      0 -> x
+      _ -> x * lazyProduct xs 
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -61,8 +72,13 @@ lazyProduct = error "TODO"
 >>> duplicate "cab"
 "ccaabb"
 -}
+
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate [] = []
+duplicate (x:xs) = x : x : duplicate xs
+
+duplicate2 :: [a] -> [a]
+duplicate2 = concatMap (replicate 2)
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -74,7 +90,12 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt pos list 
+  | null list = (Nothing, [])
+  | pos >= length list = (Nothing, list)
+  | pos < 0 = (Nothing, list)
+  | otherwise = (Just (list !! pos), take pos list ++ drop (pos + 1) list)
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -85,7 +106,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -101,7 +123,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: [Char] -> [Char] 
+dropSpaces = filter (not . isSpace)
 
 {- |
 
@@ -157,14 +180,83 @@ You're free to define any helper functions.
        treasure besides gold (if you already haven't done this).
 -}
 
--- some help in the beginning ;)
-data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
+-- -- some help in the beginning ;)
+type Health = Int 
+type Attack = Int
+type Gold = Int
+
+data Knight = MKKnight
+    { knightHealth    :: Health
+    , knightAttack    :: Attack
     , knightEndurance :: Int
     }
+    
+data Chest a = MKChest 
+    { chestGold    :: Gold
+    , chestTresure :: a
+    }
 
-dragonFight = error "TODO"
+data DragonType 
+    = Red
+    | Black
+    | Green
+
+data Dragon = MKDragon 
+    { dragonType      :: DragonType
+    , dragonHealth    :: Health
+    , dragonFirePower :: Attack
+    }
+
+data Cave a = MKCave 
+    { caveChest      :: Chest a
+    , caveDragon     :: Dragon
+    }
+
+data Reward a = MKReward 
+    { rewardTreasure   :: Maybe a
+    , rewardFold       :: Gold
+    , rewardExpirience :: Int
+    }
+
+data FightResult a
+    = Win (Reward a)
+    | Run
+    | Death
+
+attack :: Int -> Knight -> Dragon -> (Int, Knight, Dragon)
+attack attempt knight dragon
+    | attempt == 10 = 
+        ( 0
+        , knight { knightHealth = knightHealth knight - dragonFirePower dragon }
+        , dragon
+        )
+    | otherwise = 
+        ( attempt + 1
+        , knight { knightEndurance = knightEndurance knight - 1 }
+        , dragon { dragonHealth = dragonHealth dragon - knightAttack knight }
+        )
+
+-- Need to pass chest for polymorphism, how can I fix it? 🤔 
+resultOrNextAttack :: ((Int, Knight, Dragon), Chest a) -> FightResult a
+resultOrNextAttack ((attempt, knight, dragon), chest)
+        | knightHealth knight <= 0 = Death
+        | knightEndurance knight <= 0 = Run
+        | dragonHealth dragon <= 0 = Win (getReward (dragonType dragon) chest)
+        | otherwise = resultOrNextAttack (attack attempt knight dragon, chest)
+
+getReward :: DragonType -> Chest a -> Reward a
+getReward dragonType chest = case dragonType of
+    Green -> MKReward Nothing (chestGold chest) (getExpirience dragonType)
+    _ -> MKReward (Just (chestTresure chest)) (chestGold chest) (getExpirience dragonType) 
+
+getExpirience :: DragonType -> Int
+getExpirience dragonType = case dragonType of
+    Red -> 100
+    Black -> 150
+    Green -> 250
+
+dragonFight :: Knight -> Cave a -> FightResult a
+dragonFight k c = resultOrNextAttack ((0, k, caveDragon c), caveChest c) 
 
 ----------------------------------------------------------------------------
 -- Extra Challenges
