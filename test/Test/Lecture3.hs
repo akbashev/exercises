@@ -80,7 +80,7 @@ lecture3Spec = describe "Lecture 3" $ do
 {-
 
 !!! UNCOMMENT THE FOLLOWING SECTION FOR FOLDABLE/FUNCTOR TESTS !!!
-
+-}
     describe "Laws: Foldable" $ do
         it "List1" $ do
             lawsCheck (foldableLaws genList1With) `shouldReturn` True
@@ -92,7 +92,7 @@ lecture3Spec = describe "Lecture 3" $ do
             lawsCheck (functorLaws genList1With) `shouldReturn` True
         it "Treasure" $ do
             lawsCheck (functorLaws genTreasureWith) `shouldReturn` True
--}
+
 
 genSmallInt :: Gen Int
 genSmallInt = Gen.int (Range.linear 0 10)
